@@ -9,4 +9,4 @@ When turned on, on block exit
 
 `Alt + i` to turn on, or click the eye icon in the topbar.
 
-<video src="https://user-images.githubusercontent.com/23647837/178828948-b0408651-de33-4118-bfd3-0dfdfd1723fe.mp4"></video>
+<video src="https://user-images.githubusercontent.com/23647837/178828948-b0408651-de33-4118-bfd3-0dfdfd1723fe.mp4" controls="controls"></video>
