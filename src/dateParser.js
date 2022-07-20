@@ -1,4 +1,5 @@
 // copied and modified from https://github.com/dvargas92495/roamjs-components/blob/main/src/date/parseNlpDate.ts
+// Note: not used anymore because "of" got changed into a date, now using default chrono-node parser
 
 import addWeeks from "date-fns/addWeeks";
 import addDays from "date-fns/addDays";

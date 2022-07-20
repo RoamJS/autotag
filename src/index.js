@@ -147,11 +147,11 @@ function textareaLeave() {
     if (!attoggle) {
         let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
         if (!blockText) return;
-        blockText = NLPdates(
-            linkReferences(
-                blockText,
-                blockUid
-            )
+        blockText = linkReferences(
+            NLPdates(
+                blockText
+            ),
+            blockUid
         );
         blockUpdate(blockUid, blockText);
         let e = blockUid;
@@ -179,7 +179,7 @@ const panelConfig = {
                        onChange: (evt) => caseinsensitive = evt.target.checked}},
         {id:          "processdates",
          name:        "Natural Language dates",
-         description: "Whether or not to process NLP dates",
+         description: "Automatically change words like \"friday\" into [[July 22nd, 2022]]",
          action:      {type:     "switch",
                        onChange: (evt) => processdates = evt.target.checked}},
         {id:          "processalias",
