@@ -189,7 +189,7 @@ const panelConfig = {
         //                onChange: (evt) => processalias = evt.target.checked}},
         {id:          "minpagelength",
          name:        "Minimum Page Length",
-         description: "Change to whatever the minimum page length should be to be tagged",
+         description: "If set to 2, \"of\" will not be tagged, but \"the\" will be tagged (if those pages exist in your graph)",
          action:      {type:     "select",
                        items:    [...Array(30).keys()],
                        onChange: (item) => minpagelength = item}}
@@ -203,8 +203,6 @@ function setSettingDefault(extensionAPI, settingId, settingDefault) {
 }
 
 function onload({extensionAPI}) {
-    console.log("onload");
-
     caseinsensitive = setSettingDefault(extensionAPI, "caseinsensitive", true);
     processdates = setSettingDefault(extensionAPI, "processdates", true);
     minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
@@ -249,8 +247,6 @@ function onload({extensionAPI}) {
 }
 
 function onunload() {
-    console.log("onunload");
-
     window.removeEventListener("keydown", keydown);
 
     document.unbindLeave(textareaLeave);
