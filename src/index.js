@@ -8,7 +8,6 @@
 /* ======= OPTIONS ======= */
 
 let caseinsensitive, // change to 0 to only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])
-    processalias = false, // change to 0 to not process Page Synonyms JS aliases
     minpagelength; // change to whatever the minimum page length should be to be tagged
 
 // Exclusions: Create an [[autotag-exclude]] page. Add pages you want to exclude, comma-spaced without [[ ]], to the first block on that page
@@ -16,6 +15,7 @@ let caseinsensitive, // change to 0 to only tag references with exact case, othe
 
 import Arrive from 'arrive';
 import parseTextForDates from './dateProcessing';
+import { aliasBlock, loadPageSynonyms } from "./page-synonyms";
 
 /* ======= CODE ========  */
 
@@ -112,13 +112,6 @@ function blockUpdate(e, t) {
     });
 }
 
-function blockAlias(e) {
-    if (1 != processalias) return e;
-    window.roamjs.extension.pageSynonyms.aliasBlock({
-        blockUid: e
-    });
-}
-
 function keydown(e) {
     if ((e = e || event).altKey && 73 === e.keyCode) {
         if ((attoggle = !attoggle))
@@ -156,11 +149,10 @@ const panelConfig = {
          name:        "Natural Language dates",
          description: "Automatically change words like \"friday\" into [[July 22nd, 2022]]",
          action:      {type:     "switch"}},
-        // {id:          "processalias",
-        //  name:        "Process Alias",
-        //  description: "Whether or not to process RoamJS Page Synonyms JS aliases",
-        //  action:      {type:     "switch",
-        //                onChange: (evt) => processalias = evt.target.checked}},
+        {id:          "processalias",
+         name:        "Process Alias",
+         description: "Whether or not to process RoamJS Page Synonyms JS aliases",
+         action:      {type:     "switch"}},
         {id:          "minpagelength",
          name:        "Minimum Page Length",
          description: "If set to 2, \"of\" will not be tagged, but \"the\" will be tagged (if those pages exist in your graph)",
@@ -179,13 +171,21 @@ function setSettingDefault(extensionAPI, settingId, settingDefault) {
 function onload({extensionAPI}) {
     caseinsensitive = setSettingDefault(extensionAPI, "caseinsensitive", true);
     setSettingDefault(extensionAPI, "processdates", true);
+    setSettingDefault(extensionAPI, "processalias", false);
     minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
     extensionAPI.settings.panel.create(panelConfig);
 
     window.addEventListener("keydown", keydown);
 
+    function blockAlias(e) {
+        if (!extensionAPI.settings.get("processdates")) return e;
+        aliasBlock({
+            blockUid: e
+        });
+    }
+
     function NLPdates(e) {
-        return 1 == extensionAPI.settings.get("processdates") ?
+        return extensionAPI.settings.get("processdates") ?
             parseTextForDates(e) :
             e;
     }
@@ -242,8 +242,9 @@ function onload({extensionAPI}) {
     }
 
     // if (attoggle) autotag();
-    console.log("loaded!");
+    const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
     return function onunload() {
+        unloadPageSynonyms();
         window.removeEventListener("keydown", keydown);
 
         document.unbindLeave(textareaLeave);
@@ -254,7 +255,6 @@ function onload({extensionAPI}) {
 
         let flexDiv = document.getElementById(nameToUse + "-flex-space");
         if (flexDiv) flexDiv.remove();
-        console.log('unloaded!')
     }
 }
 
