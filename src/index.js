@@ -158,7 +158,11 @@ const panelConfig = {
          description: "If set to 2, \"of\" will not be tagged, but \"the\" will be tagged (if those pages exist in your graph)",
          action:      {type:     "select",
                        items:    [...Array(30).keys()],
-                       onChange: (item) => minpagelength = item}}
+                       onChange: (item) => minpagelength = item}},
+        {id:          "use-tags",
+        name:        "Alias with Tags",
+        description: "Whether or not to process page aliases using tag syntax: [alias]([[Page Name]])",
+        action:      {type:     "switch"}},
     ]
 };
 
