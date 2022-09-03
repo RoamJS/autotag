@@ -8,7 +8,6 @@
 /* ======= OPTIONS ======= */
 
 let caseinsensitive, // change to 0 to only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])
-    processdates = false, // change to 0 to not process roam42 NLP dates
     processalias = false, // change to 0 to not process Page Synonyms JS aliases
     minpagelength; // change to whatever the minimum page length should be to be tagged
 
@@ -104,12 +103,6 @@ function linkReferences(e) {
     );
 }
 
-function NLPdates(e) {
-    return 1 == processdates ?
-        parseTextForDates(e) :
-        e;
-}
-
 function blockUpdate(e, t) {
     window.roamAlphaAPI.updateBlock({
         block: {
@@ -143,24 +136,6 @@ function keydown(e) {
     }
 }
 
-function textareaLeave() {
-    if (!attoggle) {
-        let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
-        if (!blockText) return;
-        blockText = linkReferences(
-            NLPdates(
-                blockText
-            ),
-            blockUid
-        );
-        blockUpdate(blockUid, blockText);
-        let e = blockUid;
-        setTimeout(function () {
-            blockAlias(e);
-        }, 100);
-    }
-}
-
 function textareaArrive() {
     attoggle ||
         (blockUid = window.roamAlphaAPI.ui.getFocusedBlock()["block-uid"]);
@@ -180,8 +155,7 @@ const panelConfig = {
         {id:          "processdates",
          name:        "Natural Language dates",
          description: "Automatically change words like \"friday\" into [[July 22nd, 2022]]",
-         action:      {type:     "switch",
-                       onChange: (evt) => processdates = evt.target.checked}},
+         action:      {type:     "switch"}},
         // {id:          "processalias",
         //  name:        "Process Alias",
         //  description: "Whether or not to process RoamJS Page Synonyms JS aliases",
@@ -204,11 +178,35 @@ function setSettingDefault(extensionAPI, settingId, settingDefault) {
 
 function onload({extensionAPI}) {
     caseinsensitive = setSettingDefault(extensionAPI, "caseinsensitive", true);
-    processdates = setSettingDefault(extensionAPI, "processdates", true);
+    setSettingDefault(extensionAPI, "processdates", true);
     minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
     extensionAPI.settings.panel.create(panelConfig);
 
     window.addEventListener("keydown", keydown);
+
+    function NLPdates(e) {
+        return 1 == extensionAPI.settings.get("processdates") ?
+            parseTextForDates(e) :
+            e;
+    }
+
+    function textareaLeave() {
+        if (!attoggle) {
+            let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
+            if (!blockText) return;
+            blockText = linkReferences(
+                NLPdates(
+                    blockText
+                ),
+                blockUid
+            );
+            blockUpdate(blockUid, blockText);
+            let e = blockUid;
+            setTimeout(function () {
+                blockAlias(e);
+            }, 100);
+        }
+    }
 
     document.leave("textarea.rm-block-input", textareaLeave),
     document.arrive("textarea.rm-block-input", textareaArrive);
@@ -244,22 +242,22 @@ function onload({extensionAPI}) {
     }
 
     // if (attoggle) autotag();
-}
+    console.log("loaded!");
+    return function onunload() {
+        window.removeEventListener("keydown", keydown);
 
-function onunload() {
-    window.removeEventListener("keydown", keydown);
+        document.unbindLeave(textareaLeave);
+        document.unbindArrive(textareaArrive);
 
-    document.unbindLeave(textareaLeave);
-    document.unbindArrive(textareaArrive);
+        let button = document.getElementById(mainButtonId);
+        if (button) button.remove();
 
-    let button = document.getElementById(mainButtonId);
-    if (button) button.remove();
-
-    let flexDiv = document.getElementById(nameToUse + "-flex-space");
-    if (flexDiv) flexDiv.remove();
+        let flexDiv = document.getElementById(nameToUse + "-flex-space");
+        if (flexDiv) flexDiv.remove();
+        console.log('unloaded!')
+    }
 }
 
 export default {
     onload: onload,
-    onunload: onunload
 };
