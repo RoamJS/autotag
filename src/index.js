@@ -16,6 +16,7 @@ let caseinsensitive, // change to 0 to only tag references with exact case, othe
 import Arrive from 'arrive';
 import parseTextForDates from './dateProcessing';
 import { aliasBlock, loadPageSynonyms } from "./page-synonyms";
+import {initializeUnlinkFinder, shutdownUnlinkFinder} from "./unlink-finder";
 
 /* ======= CODE ========  */
 
@@ -163,6 +164,10 @@ const panelConfig = {
         name:        "Alias with Tags",
         description: "Whether or not to process page aliases using tag syntax: [alias]([[Page Name]])",
         action:      {type:     "switch"}},
+        {id:          "unlink-finder",
+        name:        "Unlink Finder",
+        description: "Whether or not to initialize the unlink finder feature for manual tagging of unlinked references",
+        action:      {type:     "switch", onChange: (e) => e.target.checked ? initializeUnlinkFinder() : shutdownUnlinkFinder()}},
     ]
 };
 
@@ -177,6 +182,8 @@ function onload({extensionAPI}) {
     setSettingDefault(extensionAPI, "processdates", true);
     setSettingDefault(extensionAPI, "processalias", false);
     minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
+    setSettingDefault(extensionAPI, "use-tags", true);
+    setSettingDefault(extensionAPI, "unlink-finder", false);
     extensionAPI.settings.panel.create(panelConfig);
 
     window.addEventListener("keydown", keydown);
@@ -247,8 +254,10 @@ function onload({extensionAPI}) {
 
     // if (attoggle) autotag();
     const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
+    if (extensionAPI.settings.get("unlink-finder")) initializeUnlinkFinder(minpagelength);
     return function onunload() {
         unloadPageSynonyms();
+        shutdownUnlinkFinder();
         window.removeEventListener("keydown", keydown);
 
         document.unbindLeave(textareaLeave);
