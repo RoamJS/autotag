@@ -3,6 +3,7 @@ module.exports = {
         react: "React",
         "chrono-node": "ChronoNode"
     },
+    mode: "production",
     externalsType: "window",
     entry: './src/index.js',
     output: {

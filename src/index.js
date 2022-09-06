@@ -8,8 +8,6 @@
 /* ======= OPTIONS ======= */
 
 let caseinsensitive, // change to 0 to only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])
-    processdates = false, // change to 0 to not process roam42 NLP dates
-    processalias = false, // change to 0 to not process Page Synonyms JS aliases
     minpagelength; // change to whatever the minimum page length should be to be tagged
 
 // Exclusions: Create an [[autotag-exclude]] page. Add pages you want to exclude, comma-spaced without [[ ]], to the first block on that page
@@ -17,6 +15,8 @@ let caseinsensitive, // change to 0 to only tag references with exact case, othe
 
 import Arrive from 'arrive';
 import parseTextForDates from './dateProcessing';
+import { aliasBlock, loadPageSynonyms } from "./page-synonyms";
+import {initializeUnlinkFinder, shutdownUnlinkFinder} from "./unlink-finder";
 
 /* ======= CODE ========  */
 
@@ -104,25 +104,12 @@ function linkReferences(e) {
     );
 }
 
-function NLPdates(e) {
-    return 1 == processdates ?
-        parseTextForDates(e) :
-        e;
-}
-
 function blockUpdate(e, t) {
     window.roamAlphaAPI.updateBlock({
         block: {
             uid: e,
             string: t
         }
-    });
-}
-
-function blockAlias(e) {
-    if (1 != processalias) return e;
-    window.roamjs.extension.pageSynonyms.aliasBlock({
-        blockUid: e
     });
 }
 
@@ -140,24 +127,6 @@ function keydown(e) {
                 .getElementById("autotag-icon")
                 .classList.replace("bp3-icon-eye-off", "bp3-icon-eye-on");
         }
-    }
-}
-
-function textareaLeave() {
-    if (!attoggle) {
-        let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
-        if (!blockText) return;
-        blockText = linkReferences(
-            NLPdates(
-                blockText
-            ),
-            blockUid
-        );
-        blockUpdate(blockUid, blockText);
-        let e = blockUid;
-        setTimeout(function () {
-            blockAlias(e);
-        }, 100);
     }
 }
 
@@ -180,19 +149,25 @@ const panelConfig = {
         {id:          "processdates",
          name:        "Natural Language dates",
          description: "Automatically change words like \"friday\" into [[July 22nd, 2022]]",
-         action:      {type:     "switch",
-                       onChange: (evt) => processdates = evt.target.checked}},
-        // {id:          "processalias",
-        //  name:        "Process Alias",
-        //  description: "Whether or not to process RoamJS Page Synonyms JS aliases",
-        //  action:      {type:     "switch",
-        //                onChange: (evt) => processalias = evt.target.checked}},
+         action:      {type:     "switch"}},
+        {id:          "processalias",
+         name:        "Process Alias",
+         description: "Whether or not to process RoamJS Page Synonyms JS aliases",
+         action:      {type:     "switch"}},
         {id:          "minpagelength",
          name:        "Minimum Page Length",
          description: "If set to 2, \"of\" will not be tagged, but \"the\" will be tagged (if those pages exist in your graph)",
          action:      {type:     "select",
                        items:    [...Array(30).keys()],
-                       onChange: (item) => minpagelength = item}}
+                       onChange: (item) => minpagelength = item}},
+        {id:          "use-tags",
+        name:        "Alias with Tags",
+        description: "Whether or not to process page aliases using tag syntax: [alias]([[Page Name]])",
+        action:      {type:     "switch"}},
+        {id:          "unlink-finder",
+        name:        "Unlink Finder",
+        description: "Whether or not to initialize the unlink finder feature for manual tagging of unlinked references",
+        action:      {type:     "switch", onChange: (e) => e.target.checked ? initializeUnlinkFinder() : shutdownUnlinkFinder()}},
     ]
 };
 
@@ -204,11 +179,45 @@ function setSettingDefault(extensionAPI, settingId, settingDefault) {
 
 function onload({extensionAPI}) {
     caseinsensitive = setSettingDefault(extensionAPI, "caseinsensitive", true);
-    processdates = setSettingDefault(extensionAPI, "processdates", true);
+    setSettingDefault(extensionAPI, "processdates", true);
+    setSettingDefault(extensionAPI, "processalias", false);
     minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
+    setSettingDefault(extensionAPI, "use-tags", true);
+    setSettingDefault(extensionAPI, "unlink-finder", false);
     extensionAPI.settings.panel.create(panelConfig);
 
     window.addEventListener("keydown", keydown);
+
+    function blockAlias(e) {
+        if (!extensionAPI.settings.get("processdates")) return e;
+        aliasBlock({
+            blockUid: e
+        });
+    }
+
+    function NLPdates(e) {
+        return extensionAPI.settings.get("processdates") ?
+            parseTextForDates(e) :
+            e;
+    }
+
+    function textareaLeave() {
+        if (!attoggle) {
+            let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
+            if (!blockText) return;
+            blockText = linkReferences(
+                NLPdates(
+                    blockText
+                ),
+                blockUid
+            );
+            blockUpdate(blockUid, blockText);
+            let e = blockUid;
+            setTimeout(function () {
+                blockAlias(e);
+            }, 100);
+        }
+    }
 
     document.leave("textarea.rm-block-input", textareaLeave),
     document.arrive("textarea.rm-block-input", textareaArrive);
@@ -244,22 +253,24 @@ function onload({extensionAPI}) {
     }
 
     // if (attoggle) autotag();
-}
+    const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
+    if (extensionAPI.settings.get("unlink-finder")) initializeUnlinkFinder(minpagelength);
+    return function onunload() {
+        unloadPageSynonyms();
+        shutdownUnlinkFinder();
+        window.removeEventListener("keydown", keydown);
 
-function onunload() {
-    window.removeEventListener("keydown", keydown);
+        document.unbindLeave(textareaLeave);
+        document.unbindArrive(textareaArrive);
 
-    document.unbindLeave(textareaLeave);
-    document.unbindArrive(textareaArrive);
+        let button = document.getElementById(mainButtonId);
+        if (button) button.remove();
 
-    let button = document.getElementById(mainButtonId);
-    if (button) button.remove();
-
-    let flexDiv = document.getElementById(nameToUse + "-flex-space");
-    if (flexDiv) flexDiv.remove();
+        let flexDiv = document.getElementById(nameToUse + "-flex-space");
+        if (flexDiv) flexDiv.remove();
+    }
 }
 
 export default {
     onload: onload,
-    onunload: onunload
 };
