@@ -191,7 +191,8 @@ function onload({extensionAPI}) {
     function blockAlias(e) {
         if (!extensionAPI.settings.get("processdates")) return e;
         aliasBlock({
-            blockUid: e
+            blockUid: e,
+            extensionAPI,
         });
     }
 
