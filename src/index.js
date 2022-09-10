@@ -255,7 +255,7 @@ function onload({extensionAPI}) {
 
     // if (attoggle) autotag();
     const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
-    if (extensionAPI.settings.get("unlink-finder")) initializeUnlinkFinder(minpagelength);
+    if (extensionAPI.settings.get("unlink-finder")) initializeUnlinkFinder( { minimumPageLength: minpagelength, aliasCaseSensitive: caseinsensitive });
     return function onunload() {
         unloadPageSynonyms();
         shutdownUnlinkFinder();

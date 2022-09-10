@@ -7,23 +7,18 @@ const redundantWordMatchStyle = "rgba(168, 42, 42, 0.4)";
 function getAllPages() {
   return window.roamAlphaAPI
     .q("[:find ?t :where [?e :node/title ?t] ]")
-    .map((t) => t[0])
+    .map((t) => t[0] as string)
     .sort(function (a, b) {
       return b.length - a.length;
     });
 }
 
-function removeUnlinkSpans(el) {
+function removeUnlinkSpans(el: Element) {
   for (let i = 0; i < el.childNodes.length; i++) {
-    if (
-      el.childNodes[i].nodeType == 1 &&
-      el.childNodes[i].classList.contains("unlink-finder")
-    ) {
-      el.childNodes[i].insertAdjacentText(
-        "afterend",
-        el.childNodes[i].innerText
-      );
-      el.childNodes[i].remove();
+    const child = el.childNodes[i] as HTMLElement;
+    if (child.nodeType == 1 && child.classList.contains("unlink-finder")) {
+      child.insertAdjacentText("afterend", child.innerText);
+      child.remove();
     }
   }
   el.normalize();
@@ -43,10 +38,7 @@ function getAllAliases() {
                      [?parentPage :block/children ?referencingBlock]
              ]`
     )
-    .map((p) => p[0]);
-  // This function is handpicked from David Vargas' roam-client.
-  // It is used to grab configuration from a Roam page.
-  // You can find the whole library here: https://github.com/dvargas92495/roam-client
+    .map((p) => p[0] as { title: string; uid: string });
   var uidWithAliases = pagesWithAliases.map((p) => ({
     title: p.title,
     uid: p.uid,
@@ -75,7 +67,7 @@ function getAllAliases() {
 // This function is handpicked from David Vargas' roam-client.
 // It is used to grab configuration from a Roam page.
 // You can find the whole library here: https://github.com/dvargas92495/roam-client
-const toAttributeValue = (s) =>
+const toAttributeValue = (s: string) =>
   (s.trim().startsWith("{{or: ")
     ? s.substring("{{or: ".length, s.indexOf("|"))
     : s
@@ -84,8 +76,10 @@ const toAttributeValue = (s) =>
 // This function is handpicked from David Vargas' roam-client.
 // It is used to grab configuration from a Roam page.
 // You can find the whole library here: https://github.com/dvargas92495/roam-client
-const getAttrConfigFromQuery = (query) => {
-  const pageResults = window.roamAlphaAPI.q(query);
+const getAttrConfigFromQuery = (query: string) => {
+  const pageResults = window.roamAlphaAPI.q(query) as {
+    attrs: [string, string, { source: [string, string] }][];
+  }[][];
   if (pageResults.length === 0 || !pageResults[0][0].attrs) {
     return {};
   }
@@ -95,12 +89,14 @@ const getAttrConfigFromQuery = (query) => {
   );
   const entries = configurationAttrRefs.map(
     (r) =>
-      window.roamAlphaAPI
-        .q(
+      ((
+        window.roamAlphaAPI.q(
           `[:find (pull ?e [:block/string]) :where [?e :block/uid "${r}"] ]`
-        )[0][0]
-        .string?.split("::")
-        .map(toAttributeValue) || [r, "undefined"]
+        )[0][0] as { string: string }
+      ).string
+        ?.split("::")
+        .map(toAttributeValue) as [string, string]) ||
+      ([r, "undefined"] as const)
   );
   return Object.fromEntries(entries);
 };
@@ -108,7 +104,7 @@ const getAttrConfigFromQuery = (query) => {
 // This function is handpicked from David Vargas' roam-client.
 // It is used to grab configuration from a Roam page.
 // You can find the whole library here: https://github.com/dvargas92495/roam-client
-const getConfigFromPage = (inputPage) => {
+const getConfigFromPage = (inputPage: string) => {
   const page =
     inputPage ||
     document.getElementsByClassName("rm-title-display")[0]?.textContent;
@@ -120,7 +116,7 @@ const getConfigFromPage = (inputPage) => {
   );
 };
 
-function pageTaggedInParent(node, page) {
+function pageTaggedInParent(node: Node, page: string) {
   let parent = node.parentElement;
   while (parent.classList.contains("roam-article") == false) {
     parent = parent.parentElement;
@@ -153,7 +149,11 @@ window.addEventListener("popstate", () => {
   window.dispatchEvent(new Event("locationchange"));
 });
 
-function findTargetNodes(blocks, pages, aliases, settings) {
+function findTargetNodes(
+  blocks: HTMLCollectionOf<Element>,
+  pages: string[],
+  aliases: Map<string, string>,
+) {
   let matched = false;
   loop1: for (let i = 0; i < blocks.length; i++) {
     // all blocks only have 1 top level child node, a span.
@@ -171,10 +171,11 @@ function findTargetNodes(blocks, pages, aliases, settings) {
       if (node.nodeType == 1) {
         // element node type, need to dig deeper
         // these are already linked, skip
+        const elementNode = node as Element;
         if (
-          node.hasAttribute("data-link-title") ||
-          node.hasAttribute("data-tag") ||
-          node.hasAttribute("recommend")
+          elementNode.hasAttribute("data-link-title") ||
+          elementNode.hasAttribute("data-tag") ||
+          elementNode.hasAttribute("recommend")
         ) {
           continue;
         }
@@ -191,10 +192,11 @@ function findTargetNodes(blocks, pages, aliases, settings) {
             if (node.nodeType == 1) {
               // element node type, need to dig deeper
               // these are already linked, skip
+              const elementNode = node.childNodes[k] as Element;
               if (
-                node.childNodes[k].hasAttribute("data-link-title") ||
-                node.childNodes[k].hasAttribute("data-tag") ||
-                node.childNodes[k].hasAttribute("recommend")
+                elementNode.hasAttribute("data-link-title") ||
+                elementNode.hasAttribute("data-tag") ||
+                elementNode.hasAttribute("recommend")
               ) {
                 continue;
               }
@@ -207,31 +209,34 @@ function findTargetNodes(blocks, pages, aliases, settings) {
   return matched;
 }
 
-function unlinkFinder(minimumPageLength = 2) {
-  // blocks on the page where the button is clicked
-  // get all pages in the graph
+let settings = { minimumPageLength: 2, aliasCaseSensitive: false };
+
+function runUnlinkFinder() {
+  let matchFound = false;
   const unlinkFinderPages = getAllPages();
   const unlinkFinderAliases = getAllAliases();
-  const unlinkFinderConfig = getConfigFromPage("Unlink Finder");
-  const aliasCaseSensitive = unlinkFinderConfig["Alias Case-Sensitive"] === "Y";
-  let matchFound = false;
+  setTimeout(function () {
+    do {
+      let blocks = document.getElementsByClassName("roam-block");
+      matchFound = findTargetNodes(
+        blocks,
+        unlinkFinderPages,
+        unlinkFinderAliases,
+      );
+    } while (matchFound == true);
+  }, 1000);
+  addContextMenuListener();
+}
 
-  function runUnlinkFinder() {
-    matchFound = false;
-    setTimeout(function () {
-      do {
-        let blocks = document.getElementsByClassName("roam-block");
-        matchFound = findTargetNodes(
-          blocks,
-          unlinkFinderPages,
-          unlinkFinderAliases,
-          { minimumPageLength, aliasCaseSensitive }
-        );
-      } while (matchFound == true);
-    }, 1000);
-    addContextMenuListener();
-  }
+const clearUnlinkFinder = () => {
+  document.getElementById("unlink-finder-icon").setAttribute("status", "off");
+  removeUnlinkFinderLegend();
+  removeUnlinkTargets();
+  document.removeEventListener("blur", runUnlinkFinder, true);
+  window.removeEventListener("locationchange", runUnlinkFinder, true);
+};
 
+function unlinkFinder() {
   if (
     document.getElementById("unlink-finder-icon").getAttribute("status") ==
     "off"
@@ -239,32 +244,22 @@ function unlinkFinder(minimumPageLength = 2) {
     document.getElementById("unlink-finder-icon").setAttribute("status", "on");
     addUnlinkFinderLegend();
     reAddUnlinkTargets();
-    do {
-      let blocks = document.getElementsByClassName("roam-block");
-      matchFound = findTargetNodes(
-        blocks,
-        unlinkFinderPages,
-        unlinkFinderAliases,
-        { minimumPageLength, aliasCaseSensitive }
-      );
-    } while (matchFound == true);
+    runUnlinkFinder();
     document.addEventListener("blur", runUnlinkFinder, true);
     window.addEventListener("locationchange", runUnlinkFinder, true);
-    addContextMenuListener();
   } else {
-    document.getElementById("unlink-finder-icon").setAttribute("status", "off");
-    removeUnlinkFinderLegend();
-    removeUnlinkTargets();
-    document.removeEventListener("blur", runUnlinkFinder, true);
-    window.removeEventListener("locationchange", runUnlinkFinder, true);
+    clearUnlinkFinder();
   }
 }
 
 function spanWrapper(
-  node,
-  pages,
-  aliases,
-  { minimumPageLength, aliasCaseSensitive }
+  node: Node,
+  pages: string[],
+  aliases: Map<string, string>,
+  {
+    minimumPageLength,
+    aliasCaseSensitive,
+  }: { minimumPageLength: number; aliasCaseSensitive: boolean }
 ) {
   try {
     for (const [key, value] of aliases.entries()) {
@@ -312,7 +307,9 @@ function spanWrapper(
       if (node.textContent.toLowerCase().includes(pages[l].toLowerCase())) {
         // iterate over the childNodes and do stuff on childNodes that
         // don't have the data-link-title attribute
-        const start = node.textContent.toLowerCase().indexOf(pages[l].toLowerCase());
+        const start = node.textContent
+          .toLowerCase()
+          .indexOf(pages[l].toLowerCase());
         const end = start + pages[l].length;
         const beforeLinkText = node.textContent.slice(0, start);
         const firstCharBeforeMatch = node.textContent.slice(start - 1)[0];
@@ -413,7 +410,9 @@ function spanWrapper(
 }
 
 function removeUnlinkTargets() {
-  const targetNodes = document.getElementsByClassName("unlink-finder");
+  const targetNodes = document.getElementsByClassName(
+    "unlink-finder"
+  ) as HTMLCollectionOf<HTMLElement>;
   for (let i = 0; i < targetNodes.length; i++) {
     if (targetNodes[i].classList.contains("unlink-finder-legend")) {
       continue;
@@ -447,7 +446,9 @@ function removeUnlinkTargets() {
 }
 
 function reAddUnlinkTargets() {
-  const targetNodes = document.getElementsByClassName("unlink-finder");
+  const targetNodes = document.getElementsByClassName(
+    "unlink-finder"
+  ) as HTMLCollectionOf<HTMLElement>;
   for (let i = 0; i < targetNodes.length; i++) {
     if (targetNodes[i].classList.contains("unlink-finder-legend")) {
       continue;
@@ -484,26 +485,19 @@ function reAddUnlinkTargets() {
   }
 }
 
-let unlinkFinderElementToLink = null;
-let unlinkFinderBackdrop = null;
-let unlinkFinderMenu = null;
-let unlinkFinderMenuOptions = null;
+let unlinkFinderElementToLink: HTMLElement = null;
+let unlinkFinderBackdrop: HTMLElement = null;
+let unlinkFinderMenu: HTMLElement = null;
+let unlinkFinderMenuOptions: HTMLElement[] = null;
 let unlinkFinderMenuVisible = false;
 
-// for some reason this is running multiple times on each click
-// first link = 1 time
-// second link = 2 times
-// etc
-// this causes the menu to not be displayed for some reason.
-// it is because I am adding multiple event listeners to each element!!
-const toggleMenu = (command) => {
-  // console.log("TOGGLING MENU: " + command)
+const toggleMenu = (command: "show" | "hide") => {
   unlinkFinderMenu.style.display = command === "show" ? "block" : "none";
   unlinkFinderBackdrop.style.display = command === "show" ? "block" : "none";
   unlinkFinderMenuVisible = command == "show";
 };
 
-const setPosition = ({ top, left }) => {
+const setPosition = ({ top, left }: { top: number; left: number }) => {
   unlinkFinderMenu.style.left = `${left}px`;
   unlinkFinderMenu.style.top = `${top}px`;
   toggleMenu("show");
@@ -513,14 +507,14 @@ function addContextMenuListener() {
   var unlinkFinderMatches = document.querySelectorAll(".unlink-finder");
   for (var i = 0, len = unlinkFinderMatches.length; i < len; i++) {
     var match = unlinkFinderMatches[i];
-    match.addEventListener("contextmenu", function (e) {
+    match.addEventListener("contextmenu", function (e: MouseEvent) {
       e.preventDefault();
       const origin = {
         left: e.pageX,
         top: e.pageY,
       };
       setPosition(origin);
-      unlinkFinderElementToLink = e.target;
+      unlinkFinderElementToLink = e.target as HTMLElement;
       return false;
     });
   }
@@ -529,17 +523,18 @@ function addContextMenuListener() {
 function setupUnlinkFinderContextMenu() {
   for (var i = 0; i < unlinkFinderMenuOptions.length; i++) {
     unlinkFinderMenuOptions[i].addEventListener("click", (e) => {
-      if (e.target.innerHTML == "Link using [[Reference]]") {
+      const target = e.target as HTMLElement;
+      if (target.innerHTML == "Link using [[Reference]]") {
         linkUsingReference(unlinkFinderElementToLink);
       }
-      if (e.target.innerHTML == "Link using [Alias]([[Reference]])") {
+      if (target.innerHTML == "Link using [Alias]([[Reference]])") {
         linkUsingAlias(unlinkFinderElementToLink);
       }
     });
   }
 }
 
-function countOfPreviousMatches(_el) {
+function countOfPreviousMatches(_el: HTMLElement) {
   let el = _el;
   let matchedWord = el.innerText;
   let count = 1;
@@ -547,12 +542,17 @@ function countOfPreviousMatches(_el) {
     if (el.previousSibling.textContent.includes(matchedWord)) {
       count += 1;
     }
-    el = el.previousSibling;
+    el = el.previousSibling as HTMLElement;
   }
   return count;
 }
 
-function replaceMatchedWord(count, text, matchedWord, futureWord) {
+function replaceMatchedWord(
+  count: number,
+  text: string,
+  matchedWord: string,
+  futureWord: string
+) {
   var t = 0;
   var re = new RegExp(matchedWord, "g");
   return text.replace(re, function (match) {
@@ -562,44 +562,48 @@ function replaceMatchedWord(count, text, matchedWord, futureWord) {
 }
 
 // TODO: get the right matched item if there are many matches of the same element in the block
-function linkUsingReference(el) {
+function linkUsingReference(el: HTMLElement) {
   let actualPageName = el.getAttribute("data-text");
   let matchedWord = el.innerText;
   let futureWord = "[[" + actualPageName + "]]";
   const locationOfMatchedWord = countOfPreviousMatches(el);
-  const blockUid = el.parentNode.parentNode.id.slice(-9);
+  const blockUid = (el.parentNode.parentNode as HTMLElement).id.slice(-9);
   let currentText =
-    window.roamAlphaAPI.q(
-      `[:find (pull ?e [:block/string]) :where [?e :block/uid "${blockUid}"]]`
-    )?.[0]?.[0]?.string || "";
+    (
+      window.roamAlphaAPI.q(
+        `[:find (pull ?e [:block/string]) :where [?e :block/uid "${blockUid}"]]`
+      )?.[0]?.[0] as { string: string }
+    )?.string || "";
   let futureText = replaceMatchedWord(
     locationOfMatchedWord,
     currentText,
     matchedWord,
     futureWord
   );
-  removeUnlinkSpans(el.parentNode);
+  removeUnlinkSpans(el.parentNode as Element);
   window.roamAlphaAPI.updateBlock({
     block: { uid: blockUid, string: futureText },
   });
 }
 
-function linkUsingAlias(el) {
+function linkUsingAlias(el: HTMLElement) {
   let actualPageName = el.getAttribute("data-text");
   let matchedWord = el.innerText;
   let futureWord = "[" + matchedWord + "]([[" + actualPageName + "]])";
   const locationOfMatchedWord = countOfPreviousMatches(el);
-  const blockUid = el.parentNode.parentNode.id.slice(-9);
-  let currentText = window.roamAlphaAPI.q(
-    `[:find (pull ?e [:block/string]) :where [?e :block/uid "${blockUid}"]]`
-  )[0][0].string;
+  const blockUid = (el.parentNode.parentNode as HTMLElement).id.slice(-9);
+  let currentText = (
+    window.roamAlphaAPI.q(
+      `[:find (pull ?e [:block/string]) :where [?e :block/uid "${blockUid}"]]`
+    )[0][0] as { string: string }
+  ).string;
   let futureText = replaceMatchedWord(
     locationOfMatchedWord,
     currentText,
     matchedWord,
     futureWord
   );
-  removeUnlinkSpans(el.parentNode);
+  removeUnlinkSpans(el.parentNode as Element);
   window.roamAlphaAPI.updateBlock({
     block: { uid: blockUid, string: futureText },
   });
@@ -675,7 +679,11 @@ function removeUnlinkFinderLegend() {
   document.getElementById("unlink-finder-legend").remove();
 }
 
-function createUnlinkFinderLegendElement(matchType, matchStyle, matchText) {
+function createUnlinkFinderLegendElement(
+  matchType: string,
+  matchStyle: string,
+  matchText: string
+) {
   var matchSpan = document.createElement("span");
   matchSpan.classList.add("unlink-finder-legend");
   matchSpan.classList.add("unlink-finder");
@@ -734,7 +742,7 @@ function addUnlinkFinderLegend() {
   }
 }
 
-function unlinkFinderButton(minimumPageLength) {
+function unlinkFinderButton() {
   var unlinkFinderButton = document.createElement("span");
   unlinkFinderButton.classList.add("bp3-popover-wrapper");
   unlinkFinderButton.setAttribute("style", "margin-left: 4px;");
@@ -753,7 +761,7 @@ function unlinkFinderButton(minimumPageLength) {
   spanTwo.appendChild(unlinkFinderIcon);
   var roamTopbar = document.getElementsByClassName("rm-topbar");
   roamTopbar[0].appendChild(unlinkFinderButton);
-  unlinkFinderIcon.onclick = () => unlinkFinder(minimumPageLength);
+  unlinkFinderIcon.onclick = unlinkFinder;
 }
 
 const clickListener = () => {
@@ -762,16 +770,22 @@ const clickListener = () => {
   }
 };
 
-export const initializeUnlinkFinder = (minimumPageLength) => {
+export const initializeUnlinkFinder = (initSettings: Partial<typeof settings>) => {
   if (document.getElementById("unlink-finder-icon") == null) {
-    unlinkFinderButton(minimumPageLength);
+    settings = {
+      ...settings,
+      ...initSettings,
+    }
+    unlinkFinderButton();
     createCustomContextMenu();
     unlinkFinderBackdrop = document.querySelector(
       ".unlink-finder-context-backdrop"
     );
     unlinkFinderMenu = document.querySelector(".unlink-finder-context-menu");
-    unlinkFinderMenuOptions = document.querySelectorAll(
-      ".unlink-finder-context-menu-option"
+    unlinkFinderMenuOptions = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        ".unlink-finder-context-menu-option"
+      )
     );
     document.addEventListener("click", clickListener);
     setupUnlinkFinderContextMenu();
@@ -779,6 +793,7 @@ export const initializeUnlinkFinder = (minimumPageLength) => {
 };
 
 export const shutdownUnlinkFinder = () => {
+  shutdownUnlinkFinder();
   document.getElementById("unlink-finder-icon")?.remove();
   document.getElementById("unlink-custom-context-menu")?.remove();
   document.removeEventListener("click", clickListener);
