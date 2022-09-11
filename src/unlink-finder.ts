@@ -197,7 +197,8 @@ function findTargetNodes(
               if (
                 elementNode.hasAttribute("data-link-title") ||
                 elementNode.hasAttribute("data-tag") ||
-                elementNode.hasAttribute("recommend")
+                elementNode.hasAttribute("recommend") ||
+                elementNode.classList.contains("rm-attr-ref")
               ) {
                 continue;
               }
@@ -794,7 +795,7 @@ export const initializeUnlinkFinder = (initSettings: Partial<typeof settings>) =
 };
 
 export const shutdownUnlinkFinder = () => {
-  shutdownUnlinkFinder();
+  clearUnlinkFinder();
   document.getElementById("unlink-finder-icon")?.remove();
   document.getElementById("unlink-custom-context-menu")?.remove();
   document.removeEventListener("click", clickListener);
