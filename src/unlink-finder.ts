@@ -175,7 +175,8 @@ function findTargetNodes(
         if (
           elementNode.hasAttribute("data-link-title") ||
           elementNode.hasAttribute("data-tag") ||
-          elementNode.hasAttribute("recommend")
+          elementNode.hasAttribute("recommend") ||
+          elementNode.classList.contains("rm-attr-ref")
         ) {
           continue;
         }
