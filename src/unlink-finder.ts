@@ -231,7 +231,7 @@ function runUnlinkFinder() {
 }
 
 const clearUnlinkFinder = () => {
-  document.getElementById("unlink-finder-icon").setAttribute("status", "off");
+  document.getElementById("unlink-finder-icon")?.setAttribute?.("status", "off");
   removeUnlinkFinderLegend();
   removeUnlinkTargets();
   document.removeEventListener("blur", runUnlinkFinder, true);
@@ -678,7 +678,7 @@ function createCustomContextMenu() {
 }
 
 function removeUnlinkFinderLegend() {
-  document.getElementById("unlink-finder-legend").remove();
+  document.getElementById("unlink-finder-legend")?.remove?.();
 }
 
 function createUnlinkFinderLegendElement(
