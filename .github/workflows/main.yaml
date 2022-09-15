@@ -1,0 +1,27 @@
+name: Publish Extension
+on:
+  push:
+    branches: main
+    paths:
+      - "src/**"
+      - "package.json"
+      - ".github/workflows/main.yaml"
+
+env:
+  API_URL: https://lambda.roamjs.com
+  ROAMJS_DEVELOPER_TOKEN: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
+  ROAMJS_EMAIL: support@roamjs.com
+  ROAMJS_EXTENSION_ID: autotag
+  ROAMJS_RELEASE_TOKEN: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install
+        run: npm install
+      - name: build
+        run: npx roamjs-scripts build --depot
+      - name: publish
+        run: npx roamjs-scripts publish --depot

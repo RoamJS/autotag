@@ -105,7 +105,7 @@ function linkReferences(e) {
 }
 
 function blockUpdate(e, t) {
-    window.roamAlphaAPI.updateBlock({
+    return window.roamAlphaAPI.updateBlock({
         block: {
             uid: e,
             string: t
@@ -189,7 +189,7 @@ function onload({extensionAPI}) {
     window.addEventListener("keydown", keydown);
 
     function blockAlias(e) {
-        if (!extensionAPI.settings.get("processdates")) return e;
+        if (!extensionAPI.settings.get("processalias")) return e;
         aliasBlock({
             blockUid: e,
             extensionAPI,
@@ -212,11 +212,8 @@ function onload({extensionAPI}) {
                 ),
                 blockUid
             );
-            blockUpdate(blockUid, blockText);
-            let e = blockUid;
-            setTimeout(function () {
-                blockAlias(e);
-            }, 100);
+            blockUpdate(blockUid, blockText)
+              .then(() => blockAlias(blockUid));
         }
     }
 

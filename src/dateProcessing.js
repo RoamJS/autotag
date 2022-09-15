@@ -14,7 +14,7 @@ const parseTextForDates = (str, reference_date) => {
 
     if (txt.length > 0) {
         txt.forEach((element) => {
-            var roamDate = `[[${roamAlphaAPI.util.dateToPageTitle(element.start.date())}]]`;
+            var roamDate = `[${element.text}]([[${roamAlphaAPI.util.dateToPageTitle(element.start.date())}]])`;
             str = str.replace(element.text, roamDate);
         });
         return str;
