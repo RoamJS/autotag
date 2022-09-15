@@ -16,6 +16,6 @@
     "arrive": "^2.4.1",
     "date-fns": "^2.28.0",
     "roamjs-components": "^0.73.3",
-    "roamjs-scripts": "^0.22.3"
+    "roamjs-scripts": "^0.22.4"
   }
 }
