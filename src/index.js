@@ -204,16 +204,17 @@ function onload({extensionAPI}) {
 
     function textareaLeave() {
         if (!attoggle) {
-            let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUid])?.[":block/string"];
+            const blockUidLeft = blockUid;
+            let blockText = window.roamAlphaAPI.pull("[:block/string]", [":block/uid", blockUidLeft])?.[":block/string"];
             if (!blockText) return;
             blockText = linkReferences(
                 NLPdates(
                     blockText
                 ),
-                blockUid
+                blockUidLeft
             );
-            blockUpdate(blockUid, blockText)
-              .then(() => blockAlias(blockUid));
+            blockUpdate(blockUidLeft, blockText)
+              .then(() => blockAlias(blockUidLeft));
         }
     }
 
