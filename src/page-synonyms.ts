@@ -82,13 +82,16 @@ const optionCallback = (
 ) => {
   const replace = getReplacer(extensionAPI);
   const blockContent = getTextByBlockUid(blockUid);
-  const newText = replace(blockContent);
-  window.roamAlphaAPI.updateBlock({
-    block: {
-      uid: blockUid,
-      string: newText,
-    },
-  });
+  if (!/^Aliases::/.test(blockContent)) {
+    const newText = replace(blockContent);
+    return window.roamAlphaAPI.updateBlock({
+      block: {
+        uid: blockUid,
+        string: newText,
+      },
+    });
+  }
+  return Promise.resolve();
 };
 
 export const aliasBlock = ({
@@ -169,6 +172,6 @@ export const loadPageSynonyms = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       .querySelectorAll(`.${ALIAS_PAGE_SYNONYM_OPTION_CLASSNAME}`)
       .forEach((d) => d.remove());
     observer.disconnect();
-    document.removeEventListener("keydown", keydownListener)
+    document.removeEventListener("keydown", keydownListener);
   };
 };
