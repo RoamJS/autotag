@@ -4,19 +4,16 @@
  * For PageSynonyms: Page Synonyms https://roamjs.com/extensions/page-synonyms
  * Hat-tips: Azlen for arrive.js idea; Tyler Wince for Unlink Finder; Chris TftHacker for Roam42; Murf for demystifying JS and refactoring the regex; David Vargas for everything!
  */
-
-/* ======= OPTIONS ======= */
-
-let caseinsensitive, // change to 0 to only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])
-  minpagelength; // change to whatever the minimum page length should be to be tagged
-
 // Exclusions: Create an [[autotag-exclude]] page. Add pages you want to exclude, comma-spaced without [[ ]], to the first block on that page
 // Change line 134 to change the keyboard shortcut to toggle on and off (default is alt+i)
 
-import Arrive from "arrive";
+import "arrive";
+import type { OnloadArgs } from "roamjs-components/types";
+import getUidsFromId from "roamjs-components/dom/getUidsFromId";
 import parseTextForDates from "./dateProcessing";
 import { aliasBlock, loadPageSynonyms } from "./page-synonyms";
 import { initializeUnlinkFinder, shutdownUnlinkFinder } from "./unlink-finder";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 
 /* ======= CODE ========  */
 
@@ -35,24 +32,25 @@ function autotag() {
 }
 
 function getAllExcludes() {
-  return window.roamAlphaAPI
-    .q(
+  return (
+    window.roamAlphaAPI.q(
       '[ :find (pull ?e [* {:block/children [*]}]) :where [?e :node/title "autotag-exclude"]]'
-    )[0][0]
-    .children[0].string.split(",")
+    )[0][0] as { children: { string: string }[] }
+  ).children[0].string
+    .split(",")
     .map((e) => e.trim());
 }
 
 function getAllPages() {
   return window.roamAlphaAPI
     .q("[:find ?t :where [?e :node/title ?t] ]")
-    .map((e) => e[0])
+    .map((e) => e[0] as string)
     .sort(function (e, t) {
       return t.length - e.length;
     });
 }
 
-function blockUpdate(e, t) {
+function blockUpdate(e: string, t: string) {
   return window.roamAlphaAPI.updateBlock({
     block: {
       uid: e,
@@ -61,8 +59,8 @@ function blockUpdate(e, t) {
   });
 }
 
-function keydown(e) {
-  if ((e = e || event).altKey && 73 === e.keyCode) {
+function keydown(e: KeyboardEvent) {
+  if (e.altKey && 73 === e.keyCode) {
     if ((attoggle = !attoggle))
       (blockUid = "initial"),
         document
@@ -86,7 +84,9 @@ function textareaArrive() {
 const nameToUse = "autotag";
 const mainButtonId = nameToUse + "-button";
 
-const panelConfig = {
+const panelConfig: Parameters<
+  OnloadArgs["extensionAPI"]["settings"]["panel"]["create"]
+>[0] = {
   tabTitle: "Auto Tag",
   settings: [
     {
@@ -96,7 +96,6 @@ const panelConfig = {
         "Only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])",
       action: {
         type: "switch",
-        onChange: (evt) => (caseinsensitive = evt.target.checked),
       },
     },
     {
@@ -115,7 +114,8 @@ const panelConfig = {
     {
       id: "processalias",
       name: "Process Alias",
-      description: "Whether or not to process Page Synonyms defined by Aliases:: attributes",
+      description:
+        "Whether or not to process Page Synonyms defined by Aliases:: attributes",
       action: { type: "switch" },
     },
     {
@@ -125,8 +125,7 @@ const panelConfig = {
         'If set to 2, "of" will not be tagged, but "the" will be tagged (if those pages exist in your graph)',
       action: {
         type: "select",
-        items: [...Array(30).keys()],
-        onChange: (item) => (minpagelength = item),
+        items: [...Array(30).keys()].map((s) => s.toString()),
       },
     },
     {
@@ -150,26 +149,30 @@ const panelConfig = {
   ],
 };
 
-function setSettingDefault(extensionAPI, settingId, settingDefault) {
+function setSettingDefault(
+  extensionAPI: OnloadArgs["extensionAPI"],
+  settingId: string,
+  settingDefault: string | number | boolean
+) {
   let storedSetting = extensionAPI.settings.get(settingId);
   if (null == storedSetting)
     extensionAPI.settings.set(settingId, settingDefault);
   return storedSetting || settingDefault;
 }
 
-function onload({ extensionAPI }) {
-  caseinsensitive = setSettingDefault(extensionAPI, "caseinsensitive", true);
+function onload({ extensionAPI }: OnloadArgs) {
+  setSettingDefault(extensionAPI, "caseinsensitive", true);
   setSettingDefault(extensionAPI, "processreferences", true);
   setSettingDefault(extensionAPI, "processdates", true);
   setSettingDefault(extensionAPI, "processalias", false);
-  minpagelength = setSettingDefault(extensionAPI, "minpagelength", 2);
+  setSettingDefault(extensionAPI, "minpagelength", 2);
   setSettingDefault(extensionAPI, "use-tags", true);
   setSettingDefault(extensionAPI, "unlink-finder", false);
   extensionAPI.settings.panel.create(panelConfig);
 
   window.addEventListener("keydown", keydown);
 
-  function blockAlias(e) {
+  function blockAlias(e: string) {
     if (!extensionAPI.settings.get("processalias")) return e;
     aliasBlock({
       blockUid: e,
@@ -177,15 +180,17 @@ function onload({ extensionAPI }) {
     });
   }
 
-  function NLPdates(e) {
+  function NLPdates(e: string) {
     return extensionAPI.settings.get("processdates") ? parseTextForDates(e) : e;
   }
 
-  function linkReferences(e) {
+  function linkReferences(e: string) {
+    const caseinsensitive = extensionAPI.settings.get("caseinsensitive");
+    const minpagelength = extensionAPI.settings.get("minpagelength");
     if (!e) return undefined;
     if (!extensionAPI.settings.get("processreferences")) return e;
     let t = getAllPages(),
-      l = [];
+      l = [] as string[];
     0 !==
       window.roamAlphaAPI.q(
         '[:find (pull ?e [*]) :where [?e :node/title "autotag-exclude"] ]'
@@ -205,7 +210,7 @@ function onload({ extensionAPI }) {
         "g"
       ),
       i = e,
-      a = [];
+      a = [] as string[];
     return (
       n.forEach((e) => {
         let t = e.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
@@ -249,7 +254,9 @@ function onload({ extensionAPI }) {
     }
   }
 
+  // @ts-ignore arrive.js
   document.leave("textarea.rm-block-input", textareaLeave),
+    // @ts-ignore arrive.js
     document.arrive("textarea.rm-block-input", textareaArrive);
 
   var bpIconName = "eye-off",
@@ -285,15 +292,52 @@ function onload({ extensionAPI }) {
   const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
   if (extensionAPI.settings.get("unlink-finder"))
     initializeUnlinkFinder({
-      minimumPageLength: minpagelength,
-      aliasCaseSensitive: caseinsensitive,
+      minimumPageLength:
+        (extensionAPI.settings.get("minpagelength") as number) || 2,
+      aliasCaseSensitive:
+        (extensionAPI.settings.get("caseinsensitive") as boolean) || false,
     });
+  const dateTagListener = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (
+      (e.key === ";" || e.code === "Semicolon") &&
+      target.tagName === "TEXTAREA" &&
+      target.classList.contains("rm-block-input")
+    ) {
+      const { selectionStart, id, value } = target as HTMLTextAreaElement;
+      const location = window.roamAlphaAPI.ui.getFocusedBlock();
+      const textToCursor = value.substring(0, selectionStart);
+      if (/;[^;]+;$/.test(textToCursor)) {
+        const match = /;[^;]+;$/.exec(textToCursor);
+        const replace = match[0].slice(1, -1);
+        const replaced = parseTextForDates(replace);
+        if (replaced && replaced !== replace) {
+          blockUpdate(
+            location["block-uid"],
+            `${value.slice(0, match.index)}${replaced}${value.slice(
+              selectionStart
+            )}`
+          ).then(() => {
+            window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+              location,
+              selection: {
+                start: selectionStart - replace.length - 2 + replaced.length,
+              },
+            });
+          });
+        }
+      }
+    }
+  };
+  document.addEventListener("keyup", dateTagListener);
   return function onunload() {
     unloadPageSynonyms();
     shutdownUnlinkFinder();
     window.removeEventListener("keydown", keydown);
 
+    // @ts-ignore arrive.js
     document.unbindLeave(textareaLeave);
+    // @ts-ignore arrive.js
     document.unbindArrive(textareaArrive);
 
     let button = document.getElementById(mainButtonId);
@@ -301,6 +345,7 @@ function onload({ extensionAPI }) {
 
     let flexDiv = document.getElementById(nameToUse + "-flex-space");
     if (flexDiv) flexDiv.remove();
+    document.removeEventListener("keyup", dateTagListener);
   };
 }
 

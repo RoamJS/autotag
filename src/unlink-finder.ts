@@ -152,7 +152,7 @@ window.addEventListener("popstate", () => {
 function findTargetNodes(
   blocks: HTMLCollectionOf<Element>,
   pages: string[],
-  aliases: Map<string, string>,
+  aliases: Map<string, string>
 ) {
   let matched = false;
   loop1: for (let i = 0; i < blocks.length; i++) {
@@ -223,7 +223,7 @@ function runUnlinkFinder() {
       matchFound = findTargetNodes(
         blocks,
         unlinkFinderPages,
-        unlinkFinderAliases,
+        unlinkFinderAliases
       );
     } while (matchFound == true);
   }, 1000);
@@ -231,7 +231,9 @@ function runUnlinkFinder() {
 }
 
 const clearUnlinkFinder = () => {
-  document.getElementById("unlink-finder-icon")?.setAttribute?.("status", "off");
+  document
+    .getElementById("unlink-finder-icon")
+    ?.setAttribute?.("status", "off");
   removeUnlinkFinderLegend();
   removeUnlinkTargets();
   document.removeEventListener("blur", runUnlinkFinder, true);
@@ -772,12 +774,14 @@ const clickListener = () => {
   }
 };
 
-export const initializeUnlinkFinder = (initSettings: Partial<typeof settings>) => {
+export const initializeUnlinkFinder = (
+  initSettings: Partial<typeof settings> = {}
+) => {
   if (document.getElementById("unlink-finder-icon") == null) {
     settings = {
       ...settings,
       ...initSettings,
-    }
+    };
     unlinkFinderButton();
     createCustomContextMenu();
     unlinkFinderBackdrop = document.querySelector(
