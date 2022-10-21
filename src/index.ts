@@ -84,71 +84,6 @@ function textareaArrive() {
 const nameToUse = "autotag";
 const mainButtonId = nameToUse + "-button";
 
-const panelConfig: Parameters<
-  OnloadArgs["extensionAPI"]["settings"]["panel"]["create"]
->[0] = {
-  tabTitle: "Auto Tag",
-  settings: [
-    {
-      id: "caseinsensitive",
-      name: "Case Insensitive",
-      description:
-        "Only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])",
-      action: {
-        type: "switch",
-      },
-    },
-    {
-      id: "processreferences",
-      name: "Autolink References",
-      description: "Automatically link unlinked references during autotag",
-      action: { type: "switch" },
-    },
-    {
-      id: "processdates",
-      name: "Natural Language dates",
-      description:
-        'Automatically change words like "friday" into [[July 22nd, 2022]]',
-      action: { type: "switch" },
-    },
-    {
-      id: "processalias",
-      name: "Process Alias",
-      description:
-        "Whether or not to process Page Synonyms defined by Aliases:: attributes",
-      action: { type: "switch" },
-    },
-    {
-      id: "minpagelength",
-      name: "Minimum Page Length",
-      description:
-        'If set to 2, "of" will not be tagged, but "the" will be tagged (if those pages exist in your graph)',
-      action: {
-        type: "select",
-        items: [...Array(30).keys()].map((s) => s.toString()),
-      },
-    },
-    {
-      id: "use-tags",
-      name: "Alias with Tags",
-      description:
-        "Whether or not to process page aliases using tag syntax: [alias]([[Page Name]])",
-      action: { type: "switch" },
-    },
-    {
-      id: "unlink-finder",
-      name: "Unlink Finder",
-      description:
-        "Whether or not to initialize the unlink finder feature for manual tagging of unlinked references",
-      action: {
-        type: "switch",
-        onChange: (e) =>
-          e.target.checked ? initializeUnlinkFinder() : shutdownUnlinkFinder(),
-      },
-    },
-  ],
-};
-
 function setSettingDefault(
   extensionAPI: OnloadArgs["extensionAPI"],
   settingId: string,
@@ -160,15 +95,96 @@ function setSettingDefault(
   return storedSetting || settingDefault;
 }
 
+const friday = new Date();
+friday.setDate(friday.getDate() - friday.getDay() + 5);
+
 function onload({ extensionAPI }: OnloadArgs) {
   setSettingDefault(extensionAPI, "caseinsensitive", true);
   setSettingDefault(extensionAPI, "processreferences", true);
-  setSettingDefault(extensionAPI, "processdates", true);
+  const initProcessDates = setSettingDefault(
+    extensionAPI,
+    "processdates",
+    true
+  );
   setSettingDefault(extensionAPI, "processalias", false);
   setSettingDefault(extensionAPI, "minpagelength", 2);
   setSettingDefault(extensionAPI, "use-tags", true);
-  setSettingDefault(extensionAPI, "unlink-finder", false);
-  extensionAPI.settings.panel.create(panelConfig);
+  const initUnlinkFinder = setSettingDefault(
+    extensionAPI,
+    "unlink-finder",
+    false
+  );
+  extensionAPI.settings.panel.create({
+    tabTitle: "Auto Tag",
+    settings: [
+      {
+        id: "caseinsensitive",
+        name: "Case Insensitive",
+        description:
+          "Only tag references with exact case, otherwise it will alias, e.g., [book]([[Book]])",
+        action: {
+          type: "switch",
+        },
+      },
+      {
+        id: "processreferences",
+        name: "Autolink References",
+        description: "Automatically link unlinked references during autotag",
+        action: { type: "switch" },
+      },
+      {
+        id: "processdates",
+        name: "Natural Language dates",
+        description: `Allow date nlp resolution within semicolons, e.g. ";friday;" turns into [[${window.roamAlphaAPI.util.dateToPageTitle(
+          friday
+        )}]]`,
+        action: {
+          type: "switch",
+          onChange: (e) =>
+            e.target.checked
+              ? document.addEventListener("keydown", dateTagListener)
+              : document.removeEventListener("keydown", dateTagListener),
+        },
+      },
+      {
+        id: "processalias",
+        name: "Process Alias",
+        description:
+          "Whether or not to process Page Synonyms defined by Aliases:: attributes",
+        action: { type: "switch" },
+      },
+      {
+        id: "minpagelength",
+        name: "Minimum Page Length",
+        description:
+          'If set to 2, "of" will not be tagged, but "the" will be tagged (if those pages exist in your graph)',
+        action: {
+          type: "select",
+          items: [...Array(30).keys()].map((s) => s.toString()),
+        },
+      },
+      {
+        id: "use-tags",
+        name: "Alias with Tags",
+        description:
+          "Whether or not to process page aliases using tag syntax: [alias]([[Page Name]])",
+        action: { type: "switch" },
+      },
+      {
+        id: "unlink-finder",
+        name: "Unlink Finder",
+        description:
+          "Whether or not to initialize the unlink finder feature for manual tagging of unlinked references",
+        action: {
+          type: "switch",
+          onChange: (e) =>
+            e.target.checked
+              ? initializeUnlinkFinder()
+              : shutdownUnlinkFinder(),
+        },
+      },
+    ],
+  });
 
   window.addEventListener("keydown", keydown);
 
@@ -178,10 +194,6 @@ function onload({ extensionAPI }: OnloadArgs) {
       blockUid: e,
       extensionAPI,
     });
-  }
-
-  function NLPdates(e: string) {
-    return extensionAPI.settings.get("processdates") ? parseTextForDates(e) : e;
   }
 
   function linkReferences(e: string) {
@@ -247,7 +259,7 @@ function onload({ extensionAPI }: OnloadArgs) {
         blockUidLeft,
       ])?.[":block/string"];
       if (!blockText) return;
-      const processedBlockText = linkReferences(NLPdates(blockText));
+      const processedBlockText = linkReferences(blockText);
       blockUpdate(blockUidLeft, processedBlockText).then(() =>
         blockAlias(blockUidLeft)
       );
@@ -290,7 +302,7 @@ function onload({ extensionAPI }: OnloadArgs) {
 
   // if (attoggle) autotag();
   const unloadPageSynonyms = loadPageSynonyms(extensionAPI);
-  if (extensionAPI.settings.get("unlink-finder"))
+  if (initUnlinkFinder)
     initializeUnlinkFinder({
       minimumPageLength:
         (extensionAPI.settings.get("minpagelength") as number) || 2,
@@ -329,7 +341,7 @@ function onload({ extensionAPI }: OnloadArgs) {
       }
     }
   };
-  document.addEventListener("keyup", dateTagListener);
+  if (initProcessDates) document.addEventListener("keyup", dateTagListener);
   return function onunload() {
     unloadPageSynonyms();
     shutdownUnlinkFinder();
