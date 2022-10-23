@@ -121,7 +121,7 @@ function onload({ extensionAPI }: OnloadArgs) {
         id: "caseinsensitive",
         name: "Case Insensitive",
         description:
-          "Tag references with regardless of casing, otherwise it will alias, e.g., [book]([[Book]])",
+          "Tags references regardless of casing, otherwise it will alias, e.g., [book]([[Book]])",
         action: {
           type: "switch",
         },
