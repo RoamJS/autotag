@@ -45,7 +45,12 @@ function getAllAliases() {
     aliases:
       getConfigFromPage(p.title)
         ?.Aliases?.split(",")
-        ?.map((a) => a.trim())
+        ?.map((a) =>
+          a
+            .trim()
+            .replace(/^#?\[\[/, "")
+            .replace(/\]\]$/, "")
+        )
         ?.filter((a) => !!a) || [],
   }));
 
