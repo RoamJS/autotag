@@ -12,7 +12,7 @@ When turned on, on block exit
 
 <video src="https://user-images.githubusercontent.com/23647837/178828948-b0408651-de33-4118-bfd3-0dfdfd1723fe.mp4" controls="controls"></video>
 
-### Page Synynyms
+### Page Synonyms
 
 This extension adds a new option to block context menus that says "Alias Page Synonyms". Right click a block and click on the option to replace all text in the block with a reference to its defined alias. To define aliases, go to the page and add an `Aliases` attribute. All values should be comma delimited.
 
