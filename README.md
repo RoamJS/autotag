@@ -1,3 +1,5 @@
+# Auto Tag Mode
+
 Automatically tag pages that exist in your graph!
 
 When turned on, on block exit
@@ -8,11 +10,11 @@ When turned on, on block exit
 
 `Alt + i` to turn on, or click the eye icon in the topbar.
 
-**Exclusions:** Create an [[autotag-exclude]] page. Add pages you want to exclude (i.e., not be autotagged), in a comma-spaced list without [[]], as the first block on that page.
+**Exclusions:** Create an `[[autotag-exclude]]` page. Add pages you want to exclude (i.e., not be autotagged), in a comma-spaced list without `[[` `]]`, as the first block on that page.
 
-<video src="https://user-images.githubusercontent.com/23647837/178828948-b0408651-de33-4118-bfd3-0dfdfd1723fe.mp4" controls="controls"></video>
+[![image](https://github.com/RoamJS/autotag/assets/3792666/2c9b26d6-3c2c-4027-b595-663e9eec223e)](https://github.com/RoamJS/autotag/assets/3792666/d7d28f91-5214-48c3-94c4-9a675c6d3870)
 
-### Page Synonyms
+## Page Synonyms
 
 This extension adds a new option to block context menus that says "Alias Page Synonyms". Right click a block and click on the option to replace all text in the block with a reference to its defined alias. To define aliases, go to the page and add an `Aliases` attribute. All values should be comma delimited.
 
@@ -24,15 +26,15 @@ The extension also works for selecting multiple blocks. When you highlight and r
 
 By default, the extensions replace synonyms using the `[synonym](((page-uid)))` format. To use the tags format instead (`[synonym]([[Page Title]])`), head to your Roam Depot settings and enable the setting titled `Alias with Tags`.
 
-<video src="https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FWtnc8A2U3x.mp4" controls="controls"></video>
+[![image](https://github.com/RoamJS/autotag/assets/3792666/5637bca2-7c5d-49b0-b25e-1116f1211db5)](https://github.com/RoamJS/autotag/assets/3792666/5c2a4738-d6a8-484e-9470-14c7c960bd9f)
 
-### Unlink Finder
+## Unlink Finder
 
 This feature helps you find page references that haven’t been linked manually as opposed to automatically on each block exit as above. To enable, head to your Roam Depot settings for AutoTag and toggle on the setting titled `Unlink Finder`.
 
 An X-shaped button will appear in the menu bar when this feature is activated. Clicking that button while on a page will highlight words on your screen matching each of these criteria:
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Ftylerwince-public%2FxyvnsSa9mH.png)
+![image](https://github.com/RoamJS/autotag/assets/3792666/f3da8818-5df5-4116-aabd-84e52f2123d4)
 
 You could then right click on a link and choose between a `[[Reference Link]]` or an `[Alias Link]([[Alias Link]])`. Here are how the 5 match types work:
 
@@ -42,4 +44,6 @@ You could then right click on a link and choose between a `[[Reference Link]]` o
 - Redundant Match Type - These matches are case-insensitive, can be any part of a word, and are already linked in the parent block
 - Alias Match Type - If you have any pages with an `Aliases::` attribute, those aliases will be shown in Roam blue. These also have a tooltip (as mentioned above) that show the actual page name. Make sure you have CSS suggested so these tooltips work.
 
-[Demo Video on YouTube](https://youtu.be/BtvAYlS3L14)
+## Demo
+
+[![image](https://github.com/RoamJS/autotag/assets/3792666/ca441870-2425-42e1-8ae9-254769ed2934)](https://youtu.be/BtvAYlS3L14)
