@@ -14,5 +14,8 @@
     "arrive": "^2.4.1",
     "date-fns": "^2.28.0",
     "roamjs-components": "^0.80.3"
+  },
+  "samepage": {
+    "extends": "node_modules/roamjs-components/package.json"
   }
 }
