@@ -4,18 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "webpack",
-    "watch": "webpack --watch",
-    "start": "roamjs-scripts dev --depot"
-  },
-  "devDependencies": {
-    "webpack": "^5.73.0",
-    "webpack-cli": "^4.10.0"
+    "postinstall": "patch-package",
+    "start": "samepage dev",
+    "prebuild:roam": "npm install",
+    "build:roam": "samepage build --dry",
+    "test": "samepage test"
   },
   "dependencies": {
     "arrive": "^2.4.1",
     "date-fns": "^2.28.0",
-    "roamjs-components": "^0.80.3",
-    "roamjs-scripts": "^0.22.4"
+    "roamjs-components": "^0.80.3"
   }
 }
