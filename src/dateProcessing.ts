@@ -1,4 +1,3 @@
-import parseNlpDate from "roamjs-components/date/parseNlpDate";
 import * as chrono from "chrono-node";
 
 const parseTextForDates = (str: string, reference_date?: Date) => {

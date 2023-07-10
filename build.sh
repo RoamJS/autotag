@@ -1,2 +1,1 @@
-npm install
-npx roamjs-scripts build --depot
+npm run build:roam

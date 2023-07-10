@@ -9,11 +9,9 @@
 
 import "arrive";
 import type { OnloadArgs } from "roamjs-components/types";
-import getUidsFromId from "roamjs-components/dom/getUidsFromId";
 import parseTextForDates from "./dateProcessing";
 import { aliasBlock, loadPageSynonyms } from "./page-synonyms";
 import { initializeUnlinkFinder, shutdownUnlinkFinder } from "./unlink-finder";
-import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 
 /* ======= CODE ========  */
 
@@ -160,7 +158,9 @@ function onload({ extensionAPI }: OnloadArgs) {
           'If set to 2, "of" will not be tagged, but "the" will be tagged (if those pages exist in your graph)',
         action: {
           type: "select",
-          items: [...Array(30).keys()].map((s) => s.toString()),
+          items: Array(30)
+            .fill(null)
+            .map((_, s) => s.toString()),
         },
       },
       {
@@ -198,7 +198,7 @@ function onload({ extensionAPI }: OnloadArgs) {
 
   function linkReferences(e: string) {
     const caseinsensitive = extensionAPI.settings.get("caseinsensitive");
-    const minpagelength = extensionAPI.settings.get("minpagelength");
+    const minpagelength = extensionAPI.settings.get("minpagelength") as number;
     if (!e) return undefined;
     if (!extensionAPI.settings.get("processreferences")) return e;
     let t = getAllPages(),
