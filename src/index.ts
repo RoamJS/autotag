@@ -140,8 +140,8 @@ function onload({ extensionAPI }: OnloadArgs) {
           type: "switch",
           onChange: (e) =>
             e.target.checked
-              ? document.addEventListener("keydown", dateTagListener)
-              : document.removeEventListener("keydown", dateTagListener),
+              ? document.addEventListener("keyup", dateTagListener)
+              : document.removeEventListener("keyup", dateTagListener),
         },
       },
       {
