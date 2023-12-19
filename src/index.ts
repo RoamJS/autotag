@@ -196,59 +196,85 @@ function onload({ extensionAPI }: OnloadArgs) {
     });
   }
 
-  function linkReferences(e: string) {
-    const caseinsensitive = extensionAPI.settings.get("caseinsensitive");
-    const minpagelength = extensionAPI.settings.get("minpagelength") as number;
-    if (!e) return undefined;
-    if (!extensionAPI.settings.get("processreferences")) return e;
-    let t = getAllPages(),
-      l = [] as string[];
-    0 !==
-      window.roamAlphaAPI.q(
-        '[:find (pull ?e [*]) :where [?e :node/title "autotag-exclude"] ]'
-      ).length && (l = getAllExcludes());
-    let n = t.filter((t) => {
-      let n = t.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-      if (l.includes(t) || t.length <= minpagelength) return !1;
-      let g = new RegExp(n, "i");
-      return (
-        !!e.match(g) &&
-        ((g = new RegExp(`\\[\\[${n}\\]\\]|#\\b${n}\\b`)), !e.match(g))
-      );
-    });
-    n = n.sort((e, t) => t.length - e.length);
-    let g = new RegExp(
-        "(\\[[^\\]]+\\]\\([^ ]+\\)|{{[^}]+}}|\\S*::|\\[\\[[^\\]]+\\]\\]|\\[[^\\]]+\\]|\\[[^\\]]+$|https?://[^\\s]+|www\\.[^\\s]+)",
-        "g"
-      ),
-      i = e,
-      a = [] as string[];
-    return (
-      n.forEach((e) => {
-        let t = e.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
-          l = i.split(g),
-          n = "";
-        l.forEach((l) => {
-          let i = l;
-          if (!l.match(g) && !a.includes(e)) {
-            let l = new RegExp(`^\\b${t}\\b|[^\\[]\\b${t}\\b`, "i");
-            if (i.match(l)) {
-              let n = i.length;
-              (l = new RegExp(`(^|[^\\[])\\b(${t})\\b`)),
-                i.match(l)
-                  ? (i = i.replace(l, "$1[[$2]]"))
-                  : caseinsensitive &&
-                    ((l = new RegExp(`(^|[^\\[])\\b(${t})\\b`, "i")),
-                    (i = i.replace(l, `$1[$2]([[${e}]])`))),
-                i.length !== n && a.push(e);
-            }
-          }
-          n += i;
-        }),
-          (i = n);
-      }),
-      i
+  function linkReferences(text: string) {
+    const caseInsensitive = extensionAPI.settings.get("caseinsensitive");
+    const minPageLength = extensionAPI.settings.get("minpagelength") as number;
+    if (!text) return undefined;
+    if (!extensionAPI.settings.get("processreferences")) return text;
+
+    let excludedPages = [] as string[];
+    const excludeQueryResult = window.roamAlphaAPI.q(
+      '[:find (pull ?e [*]) :where [?e :node/title "autotag-exclude"] ]'
     );
+    if (excludeQueryResult.length > 0) excludedPages = getAllExcludes();
+
+    const allPages = getAllPages();
+    const filteredPages = allPages
+      .filter((title) => {
+        const escapedTitle = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+        if (excludedPages.includes(title) || title.length <= minPageLength)
+          return false;
+
+        const titleRegex = new RegExp(escapedTitle, "i");
+        const linkOrTagRegex = new RegExp(
+          `\\[\\[${escapedTitle}\\]\\]|#\\b${escapedTitle}\\b`
+        );
+
+        const isTitle = text.match(titleRegex);
+        const isLink = text.match(linkOrTagRegex);
+        return isTitle && !isLink;
+      })
+      .sort((a, b) => b.length - a.length);
+
+    // Regular expression to match special syntax elements like markdown links,
+    // Roam Research specific syntax, URLs, etc.
+    const specialSyntaxRegex = new RegExp(
+      "(\\[[^\\]]+\\]\\([^ ]+\\)|{{[^}]+}}|\\S*::|\\[\\[[^\\]]+\\]\\]|\\[[^\\]]+\\]|\\[[^\\]]+$|https?://[^\\s]+|www\\.[^\\s]+)",
+      "g"
+    );
+    let processedTitles = [] as string[];
+    let newText = "";
+
+    filteredPages.forEach((page) => {
+      const escapedPage = page.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      let splitText = text.split(specialSyntaxRegex);
+
+      splitText.forEach((chunk) => {
+        // Already been processed
+        if (chunk.match(specialSyntaxRegex) || processedTitles.includes(page)) {
+          newText += chunk;
+          return;
+        }
+
+        // Check for the page title within the chunk
+        const wordBoundaryRegex = new RegExp(
+          `^\\b${escapedPage}\\b|[^\\[]\\b${escapedPage}\\b`,
+          "i"
+        );
+        if (!chunk.match(wordBoundaryRegex)) {
+          newText += chunk;
+          return;
+        }
+
+        // Replace the page title in the chunk with the appropriate link format
+        const linkInsertionRegex = new RegExp(
+          `(^|[^\\[])\\b(${escapedPage})\\b`
+        );
+        const processedChunk = chunk.replace(
+          linkInsertionRegex,
+          caseInsensitive ? `$1[$2]([[${page}]])` : "$1[[$2]]"
+        );
+
+        // Add the page to the list of processed titles if the length has changed
+        if (processedChunk.length !== chunk.length) {
+          processedTitles.push(page);
+        }
+
+        newText += processedChunk;
+      });
+    });
+
+    return newText;
   }
 
   function textareaLeave() {
