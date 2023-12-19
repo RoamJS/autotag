@@ -1,4 +1,3 @@
-import "roamjs-components/types";
 import { OnloadArgs } from "roamjs-components/types";
 import getUidsFromId from "roamjs-components/dom/getUidsFromId";
 import getUids from "roamjs-components/dom/getUids";
