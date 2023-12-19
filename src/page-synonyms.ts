@@ -65,6 +65,7 @@ const getReplacer = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       .reduce((prevText: string, alias: string) => {
         const regex = new RegExp(
           `(^|[^a-zA-Z0-9_\\[\\].#])${alias
+            .replace(/\+/g, "\\+")
             .replace(/\[/g, "\\[")
             .replace(/\]/g, "\\]")}([^a-zA-Z0-9_\\[\\]]|$)`,
           "g"
