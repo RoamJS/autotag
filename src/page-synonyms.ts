@@ -1,4 +1,3 @@
-import "roamjs-components/types";
 import { OnloadArgs } from "roamjs-components/types";
 import getUidsFromId from "roamjs-components/dom/getUidsFromId";
 import getUids from "roamjs-components/dom/getUids";
@@ -60,16 +59,21 @@ const getReplacer = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     p.aliases.forEach((a: string) => (linkByAlias[a] = link));
     linkByAlias[p.title] = link;
   });
+
+  const boundaryStart = "(^|[^a-zA-Z0-9_\\[\\].#])"; // Start boundary: matches start of line or non-word, non-markup characters
+  const boundaryEnd = "([^a-zA-Z0-9_\\[\\]]|$)"; // End boundary: matches end of line or non-word, non-markup characters
+  const negativeLookahead = "(?![^\\[]*\\])"; // Negative lookahead: to not replace if already in a link
   return (input: string) =>
     Object.keys(linkByAlias)
       .sort((a, b) => b.length - a.length)
       .reduce((prevText: string, alias: string) => {
-        const regex = new RegExp(
-          `(^|[^a-zA-Z0-9_\\[\\].#])${alias
-            .replace(/\[/g, "\\[")
-            .replace(/\]/g, "\\]")}([^a-zA-Z0-9_\\[\\]]|$)`,
-          "g"
-        );
+        const escapedAlias = alias
+          .replace(/\+/g, "\\+")
+          .replace(/\[/g, "\\[")
+          .replace(/\]/g, "\\]");
+        const regexPattern = `${boundaryStart}${escapedAlias}${boundaryEnd}${negativeLookahead}`;
+        const regex = new RegExp(regexPattern, "g");
+
         return prevText.replace(regex, (match) =>
           match.replace(alias, `[${alias}](${linkByAlias[alias]})`)
         );
