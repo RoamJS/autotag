@@ -196,58 +196,65 @@ function onload({ extensionAPI }: OnloadArgs) {
     });
   }
 
-  function linkReferences(e: string) {
-    const caseinsensitive = extensionAPI.settings.get("caseinsensitive");
-    const minpagelength = extensionAPI.settings.get("minpagelength") as number;
-    if (!e) return undefined;
-    if (!extensionAPI.settings.get("processreferences")) return e;
-    let t = getAllPages(),
-      l = [] as string[];
+  function linkReferences(blockText: string) {
+    const caseInsensitive = extensionAPI.settings.get("caseinsensitive");
+    const minPageLength = extensionAPI.settings.get("minpagelength") as number;
+    if (!blockText) return undefined;
+    if (!extensionAPI.settings.get("processreferences")) return blockText;
+    let allPages = getAllPages(),
+      excludedTitles = [] as string[];
     0 !==
       window.roamAlphaAPI.q(
         '[:find (pull ?e [*]) :where [?e :node/title "autotag-exclude"] ]'
-      ).length && (l = getAllExcludes());
-    let n = t.filter((t) => {
-      let n = t.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-      if (l.includes(t) || t.length <= minpagelength) return !1;
-      let g = new RegExp(n, "i");
+      ).length && (excludedTitles = getAllExcludes());
+    let filteredPages = allPages.filter((page) => {
+      let escapedPageTitle = page.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      if (excludedTitles.includes(page) || page.length <= minPageLength)
+        return !1;
+      let regexPattern = new RegExp(escapedPageTitle, "i");
       return (
-        !!e.match(g) &&
-        ((g = new RegExp(`\\[\\[${n}\\]\\]|#\\b${n}\\b`)), !e.match(g))
+        !!blockText.match(regexPattern) &&
+        ((regexPattern = new RegExp(
+          `\\[\\[${escapedPageTitle}\\]\\]|#\\b${escapedPageTitle}\\b`
+        )),
+        !blockText.match(regexPattern))
       );
     });
-    n = n.sort((e, t) => t.length - e.length);
-    let g = new RegExp(
+    filteredPages = filteredPages.sort((e, t) => t.length - e.length);
+    let regexSpecialCharacters = new RegExp(
         "(\\[[^\\]]+\\]\\([^ ]+\\)|{{[^}]+}}|\\S*::|\\[\\[[^\\]]+\\]\\]|\\[[^\\]]+\\]|\\[[^\\]]+$|https?://[^\\s]+|www\\.[^\\s]+)",
         "g"
       ),
-      i = e,
-      a = [] as string[];
+      modifiedText = blockText,
+      linkedPages = [] as string[];
     return (
-      n.forEach((e) => {
+      filteredPages.forEach((e) => {
         let t = e.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"),
-          l = i.split(g),
-          n = "";
-        l.forEach((l) => {
-          let i = l;
-          if (!l.match(g) && !a.includes(e)) {
+          splitText = modifiedText.split(regexSpecialCharacters),
+          newText = "";
+        splitText.forEach((text) => {
+          let processedText = text;
+          if (!text.match(regexSpecialCharacters) && !linkedPages.includes(e)) {
             let l = new RegExp(`^\\b${t}\\b|[^\\[]\\b${t}\\b`, "i");
-            if (i.match(l)) {
-              let n = i.length;
+            if (processedText.match(l)) {
+              let n = processedText.length;
               (l = new RegExp(`(^|[^\\[])\\b(${t})\\b`)),
-                i.match(l)
-                  ? (i = i.replace(l, "$1[[$2]]"))
-                  : caseinsensitive &&
+                processedText.match(l)
+                  ? (processedText = processedText.replace(l, "$1[[$2]]"))
+                  : caseInsensitive &&
                     ((l = new RegExp(`(^|[^\\[])\\b(${t})\\b`, "i")),
-                    (i = i.replace(l, `$1[$2]([[${e}]])`))),
-                i.length !== n && a.push(e);
+                    (processedText = processedText.replace(
+                      l,
+                      `$1[$2]([[${e}]])`
+                    ))),
+                processedText.length !== n && linkedPages.push(e);
             }
           }
-          n += i;
+          newText += processedText;
         }),
-          (i = n);
+          (modifiedText = newText);
       }),
-      i
+      modifiedText
     );
   }
 
