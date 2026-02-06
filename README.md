@@ -1,6 +1,12 @@
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
+
 # Auto Tag Mode
 
-Automatically tag pages that exist in your graph!
+**Automatically apply your chosen tags to pages as you create them, keeping your graph organized with consistent page tagging.**
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/developer)
 
 When turned on, on block exit
 
