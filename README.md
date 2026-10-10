@@ -6,7 +6,7 @@
 
 **Automatically apply your chosen tags to pages as you create them, keeping your graph organized with consistent page tagging.**
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/autotag)
+[![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/autotag) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU) [![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/)
 
 When turned on, on block exit
 
