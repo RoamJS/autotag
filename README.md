@@ -6,7 +6,7 @@
 
 **Automatically apply your chosen tags to pages as you create them, keeping your graph organized with consistent page tagging.**
 
-[![RoamJS](https://raw.githubusercontent.com/RoamJS/website/d8973640b89bdfd76bff8bbe5316e50ca0133963/public/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://raw.githubusercontent.com/RoamJS/website/d8973640b89bdfd76bff8bbe5316e50ca0133963/public/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/autotag) [![Slack](https://raw.githubusercontent.com/RoamJS/website/d8973640b89bdfd76bff8bbe5316e50ca0133963/public/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
+[![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/autotag) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
 
 When turned on, on block exit
 
